@@ -1,0 +1,16 @@
+{
+  "name": "Верстак",
+  "short_name": "Верстак",
+  "description": "Чат із Claude та власні Skills. Дані зберігаються лише на цьому пристрої.",
+  "lang": "uk",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#BDB39A",
+  "theme_color": "#BDB39A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

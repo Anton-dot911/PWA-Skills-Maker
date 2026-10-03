@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#BDB39A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Верстак">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Верстак</title>
+<style>
+:root{
+  --taupe:#BDB39A;
+  --edge:#AFA58A;
+  --sand:#E1D8C3;
+  --plum:#19060F;
+  --ink:#1B0A13;
+  --muted:#5E5440;
+  --paper:#FFFDF8;
+  --g-fill:#A9D0A8;
+  --g-line:#5FA27A;
+  --g-text:#1F5A2C;
+  --err:#A12622;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --raise:6px 6px 14px rgba(120,104,70,.38),-6px -6px 14px rgba(255,250,235,.8);
+  --press:inset 4px 4px 9px rgba(120,104,70,.35),inset -4px -4px 9px rgba(255,250,235,.75);
+  --chip-shadow:0 9px 14px -3px rgba(45,50,120,.42);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--taupe);color:var(--ink);font:16px/1.5 var(--font);-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button,textarea,input,select{font-family:inherit;color:inherit}
+:focus-visible{outline:2.5px solid var(--g-line);outline-offset:3px}
+
+.shell{height:100vh;height:100dvh;max-width:580px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 24px)}
+.app{height:100%;display:flex;flex-direction:column;background:var(--sand);border-radius:36px;overflow:hidden;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.45),0 14px 0 -6px var(--edge),0 24px 30px -10px rgba(60,45,20,.4)}
+
+.top{display:flex;align-items:center;gap:8px;padding:20px 16px 12px 24px}
+.top h1{flex:1;min-width:0;margin:0;font:800 15px/1 var(--font);letter-spacing:.24em;text-transform:uppercase}
+
+.btn{min-height:46px;padding:0 18px;border:0;border-radius:18px;background:var(--sand);box-shadow:var(--raise);
+  font:700 15px/1.1 var(--font);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:box-shadow .15s}
+.btn:active{box-shadow:var(--press)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn.primary{background:var(--plum);color:#fff;box-shadow:0 10px 16px -4px rgba(45,50,120,.45)}
+.btn.primary:active{box-shadow:inset 0 3px 8px rgba(0,0,0,.55)}
+.btn.skill{background:var(--g-fill);color:var(--g-text);border:2px solid var(--g-line);box-shadow:none;border-radius:999px}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.6;cursor:default}
+.icon-btn{width:46px;height:46px;flex:none;border:0;border-radius:18px;background:var(--sand);box-shadow:var(--raise);display:grid;place-items:center;cursor:pointer}
+.icon-btn:active{box-shadow:var(--press)}
+.icon-btn svg{width:21px;height:21px}
+.icon-btn.sm{width:42px;height:42px;border-radius:16px}
+
+.list{flex:1;min-height:0;overflow-y:auto;padding:6px 18px 14px;display:flex;flex-direction:column;gap:20px;-webkit-overflow-scrolling:touch}
+.msg.user{align-self:flex-end;max-width:84%;background:var(--paper);border-radius:24px 24px 6px 24px;padding:12px 16px;box-shadow:0 6px 14px -4px rgba(90,75,45,.3);white-space:pre-wrap;word-break:break-word}
+.msg.user p{margin:0}
+.msg.claude{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;align-items:start}
+.chip{width:42px;height:42px;border-radius:15px;background:var(--plum);color:#fff;font:700 16px/42px var(--font);text-align:center;box-shadow:var(--chip-shadow)}
+.chip.bad{background:var(--err)}
+.chip.big{width:64px;height:64px;border-radius:22px;font-size:24px;line-height:64px;margin:0 auto 14px}
+.msg .act{margin-top:12px;display:flex;flex-wrap:wrap;gap:10px}
+.msg .act .btn{min-height:42px;padding:0 16px}
+.errtext{margin:9px 0 0;font-weight:700;color:var(--err)}
+
+.rich{min-width:0;word-break:break-word}
+.rich>*:first-child{margin-top:9px}
+.rich p,.rich ul,.rich ol,.rich pre,.rich h4{margin:10px 0 0}
+.rich ul,.rich ol{padding-left:22px}
+.rich li{margin:4px 0}
+.rich h4{font:800 16px/1.3 var(--font)}
+.rich pre{background:var(--paper);border-radius:16px;padding:12px 14px;overflow-x:auto;font:13px/1.55 var(--mono)}
+.rich code{background:rgba(255,255,255,.6);padding:1px 6px;border-radius:6px;font:.92em var(--mono)}
+.rich pre code{background:none;padding:0;font-size:inherit}
+.rich a{color:var(--g-text);font-weight:600}
+.rich hr{border:0;border-top:1.5px solid rgba(94,84,64,.3);margin:14px 0}
+
+.card{background:var(--sand);box-shadow:var(--raise);border-radius:26px;padding:16px}
+.card .row,.sk .row{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.card h3,.sk h3{margin:0;font:800 19px/1.2 var(--font);letter-spacing:-.01em;word-break:break-all}
+.card .sub{margin:2px 0 12px;font-size:15px;color:var(--muted)}
+.card .panel{background:var(--paper);border-radius:20px;padding:14px 16px;font-size:14.5px;line-height:1.5}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--g-fill);border:2px solid var(--g-line);
+  color:var(--g-text);font:800 12px/1.3 var(--font);letter-spacing:.16em;text-transform:uppercase}
+.pill.name{text-transform:none;letter-spacing:0;font-size:13px}
+.msg.user .pill{margin-bottom:6px}
+
+.dots{display:flex;gap:6px;align-items:center;height:42px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--plum);opacity:.3;animation:beat 1s infinite}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes beat{50%{opacity:.85}}
+
+.empty{margin:auto;text-align:center;padding:24px 14px;color:var(--muted);max-width:320px}
+.empty p{margin:0}
+
+.composer{padding:8px 14px 16px}
+.box{display:flex;align-items:flex-end;gap:8px;background:var(--sand);box-shadow:var(--press);border-radius:28px;padding:6px}
+.box:focus-within{outline:2.5px solid var(--g-line);outline-offset:3px}
+.box textarea{flex:1;min-width:0;border:0;outline:none;background:transparent;resize:none;font-size:16px;line-height:1.4;padding:11px 4px;max-height:140px}
+.skills-btn{width:46px;height:46px;flex:none;border:0;border-radius:20px;background:var(--sand);box-shadow:var(--raise);display:grid;place-items:center;cursor:pointer}
+.skills-btn:active{box-shadow:var(--press)}
+.skills-btn svg{width:22px;height:22px}
+.send{width:46px;height:46px;flex:none;border:0;border-radius:20px;background:var(--plum);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 12px -3px rgba(45,50,120,.4)}
+.send:disabled{background:#C9BFA7;color:#7A6F58;box-shadow:none;cursor:default}
+.send svg{width:20px;height:20px}
+.applied{display:flex;align-items:center;width:fit-content;max-width:100%;margin:0 6px 10px;padding:2px 2px 2px 14px;border-radius:999px;background:var(--g-fill);border:2px solid var(--g-line);color:var(--g-text);font:800 14px/1.3 var(--font)}
+.applied[hidden]{display:none}
+.applied span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.applied button{width:40px;height:36px;flex:none;border:0;background:transparent;display:grid;place-items:center;border-radius:999px;color:inherit;cursor:pointer}
+.applied svg{width:16px;height:16px}
+
+/* Sheets */
+dialog{border:0;padding:0;margin:auto auto 0;width:100%;max-width:580px;height:92vh;height:92dvh;max-height:92dvh;background:var(--sand);color:var(--ink);border-radius:34px 34px 0 0;overflow:hidden}
+dialog[open]{display:flex;flex-direction:column;animation:rise .22s ease-out}
+dialog::backdrop{background:rgba(25,6,15,.5)}
+@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:22px 10px 8px 24px}
+.sheet-head h2{margin:0 0 6px;font:800 26px/1.1 var(--font);letter-spacing:-.01em}
+.sheet-head p{margin:0;font-size:14px;color:var(--muted)}
+.close{width:44px;height:44px;flex:none;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;border-radius:16px}
+.close svg{width:22px;height:22px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:10px 20px 16px;padding:4px;border-radius:20px;background:var(--sand);box-shadow:var(--press)}
+.seg button{min-height:42px;border:0;border-radius:16px;background:transparent;font:700 15px/1 var(--font);cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--plum);color:#fff;box-shadow:var(--chip-shadow)}
+.sheet-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 20px 16px;-webkit-overflow-scrolling:touch}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 20px calc(16px + env(safe-area-inset-bottom))}
+.actions.one{grid-template-columns:1fr}
+
+.cell{display:block;margin-bottom:14px;padding:12px 18px 10px;border-radius:22px;background:var(--sand);box-shadow:var(--press)}
+.cell:focus-within{outline:2.5px solid var(--g-line);outline-offset:3px}
+.cell.bad{outline:2.5px solid var(--err);outline-offset:3px}
+.cell .lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:800 12.5px/1.4 var(--font);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.cell .lab em{font:500 13px var(--font);font-style:normal;letter-spacing:0;text-transform:none}
+.cell input,.cell textarea,.cell select{display:block;width:100%;border:0;outline:none;background:transparent;font-size:16px;line-height:1.45;padding:6px 0 4px;resize:none}
+.cell input.mono{font:500 16px var(--mono)}
+.cell textarea.tall{min-height:220px}
+.err{margin:2px 0 4px;font-size:13px;font-weight:700;color:var(--err)}
+.notice{margin:0 0 14px;padding:12px 16px;border-radius:18px;background:var(--paper);font-size:14.5px}
+.notice[hidden]{display:none}
+.note{margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+.stack{display:grid;gap:12px;margin:6px 0 12px}
+.md{margin:0;padding:16px;background:var(--paper);border-radius:22px;font:13px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word}
+
+.sk{margin-bottom:14px;padding:16px;border-radius:24px;background:var(--sand);box-shadow:var(--raise)}
+.sk.on{outline:2.5px solid var(--g-line);outline-offset:3px}
+.sk p{margin:8px 0 12px;font-size:14.5px;color:var(--muted)}
+.sk .tools{display:flex;align-items:center;gap:10px}
+.sk .tools .btn{min-height:42px;padding:0 16px;flex:1}
+
+@media (max-width:360px){.top .lbl{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="app">
+  <header class="top">
+    <h1>Верстак</h1>
+    <button class="btn" id="newBtn" type="button">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 2v12M2 8h12"/></svg>
+      <span class="lbl">Новий Skill</span>
+    </button>
+    <button class="icon-btn" id="openSettings" type="button" aria-label="Налаштування">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h9M17 6h2M3 16h2M10 16h9"/><circle cx="14.5" cy="6" r="2.2"/><circle cx="7.5" cy="16" r="2.2"/></svg>
+    </button>
+  </header>
+
+  <main class="list" id="list" aria-live="polite" aria-label="Розмова з Claude"></main>
+
+  <div class="composer">
+    <div class="applied" id="applied" hidden>
+      <span id="appliedName"></span>
+      <button type="button" id="unapply" aria-label="Зняти Skill">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4L4 12"/></svg>
+      </button>
+    </div>
+    <div class="box">
+      <button class="skills-btn" id="openSkills" type="button" aria-label="Skills">
+        <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="2"/><rect x="12" y="3.5" width="6.5" height="6.5" rx="2"/><rect x="3.5" y="12" width="6.5" height="6.5" rx="2"/><rect x="12" y="12" width="6.5" height="6.5" rx="2"/></svg>
+      </button>
+      <textarea id="input" rows="1" placeholder="Напишіть Claude" aria-label="Повідомлення"></textarea>
+      <button class="send" id="send" type="button" aria-label="Надіслати" disabled></button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Create / edit Skill -->
+<dialog id="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet-head">
+    <div>
+      <h2 id="sheetTitle">Новий Skill</h2>
+      <p>Інструкція, яку Claude підключає, коли розмова збігається з описом.</p>
+    </div>
+    <button class="close" data-close="sheet" type="button" aria-label="Закрити">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+    </button>
+  </div>
+  <div class="seg" role="tablist" aria-label="Вигляд">
+    <button type="button" role="tab" id="tabFields" aria-selected="true" aria-controls="paneFields">Поля</button>
+    <button type="button" role="tab" id="tabMd" aria-selected="false" aria-controls="paneMd">SKILL.md</button>
+  </div>
+  <div class="sheet-body">
+    <div class="notice" id="notice" role="alert" hidden></div>
+    <div id="paneFields" role="tabpanel" aria-labelledby="tabFields">
+      <div class="cell" id="cellName">
+        <label class="lab" for="fName">Назва <em>латиниця, цифри, дефіси</em></label>
+        <input id="fName" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="pr-review">
+        <div class="err" id="errName" hidden></div>
+      </div>
+      <div class="cell" id="cellDesc">
+        <label class="lab" for="fDesc">Коли застосовувати <em id="descCount">0 / 1024</em></label>
+        <textarea id="fDesc" rows="5" placeholder="Що робить Skill і за яких слів чи ситуацій Claude має його підключати"></textarea>
+        <div class="err" id="errDesc" hidden></div>
+      </div>
+      <div class="cell" id="cellBody">
+        <label class="lab" for="fBody">Інструкції</label>
+        <textarea id="fBody" class="tall" placeholder="Кроки, які Claude виконує, коли Skill підключено"></textarea>
+        <div class="err" id="errBody" hidden></div>
+      </div>
+    </div>
+    <div id="paneMd" role="tabpanel" aria-labelledby="tabMd" hidden>
+      <pre class="md" id="mdOut"></pre>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="draftBtn" type="button">Скласти з розмови</button>
+    <button class="btn primary" id="saveBtn" type="button">Зберегти Skill</button>
+  </div>
+</dialog>
+
+<!-- Skills list -->
+<dialog id="skillsSheet" aria-labelledby="skillsTitle">
+  <div class="sheet-head">
+    <div>
+      <h2 id="skillsTitle">Skills</h2>
+      <p>Застосований Skill діє в чаті, доки ви його не знімете.</p>
+    </div>
+    <button class="close" data-close="skillsSheet" type="button" aria-label="Закрити">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="skillsList"></div>
+  <div class="actions one">
+    <button class="btn primary" id="newFromList" type="button">Новий Skill</button>
+  </div>
+</dialog>
+
+<!-- Settings -->
+<dialog id="settingsSheet" aria-labelledby="settingsTitle">
+  <div class="sheet-head">
+    <div>
+      <h2 id="settingsTitle">Налаштування</h2>
+      <p>Усе зберігається лише на цьому пристрої.</p>
+    </div>
+    <button class="close" data-close="settingsSheet" type="button" aria-label="Закрити">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="notice" id="setNotice" role="alert" hidden></div>
+    <div class="cell" id="cellKey">
+      <label class="lab" for="fKey">Ключ API</label>
+      <input id="fKey" class="mono" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-ant-…">
+      <div class="err" id="errKey" hidden></div>
+    </div>
+    <p class="note">Ключ надсилається лише на api.anthropic.com і не потрапляє в експорт. Хто має доступ до цього пристрою, може його прочитати, тож використовуйте ключ із лімітом витрат.</p>
+    <div class="cell">
+      <label class="lab" for="fModel">Модель</label>
+      <select id="fModel"></select>
+    </div>
+    <div class="stack">
+      <button class="btn wide" id="exportBtn" type="button">Експортувати Skills і розмову</button>
+      <button class="btn wide" id="importBtn" type="button">Імпортувати з файлу</button>
+      <button class="btn wide" id="clearBtn" type="button">Очистити розмову</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <p class="note" id="storageNote" hidden>Сховище браузера недоступне: дані зникнуть після закриття застосунку.</p>
+  </div>
+  <div class="actions one">
+    <button class="btn primary" id="saveSettings" type="button">Зберегти</button>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(s){ return document.querySelector(s); };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var MODELS = [
+    ['claude-sonnet-5-5', 'Claude Sonnet 5.5'],
+    ['claude-opus-5-5', 'Claude Opus 5.5'],
+    ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5']
+  ];
+  var BASE_SYSTEM = 'Ти — Claude у застосунку «Верстак». Відповідай мовою користувача, чітко й без зайвих вступів.';
+  var DRAFT_SYSTEM = 'Ти допомагаєш скласти Skill для Claude на основі розмови. Skill — це повторювана процедура. ' +
+    'Поверни лише JSON-об\u2019єкт без пояснень і без markdown-огорожі, з трьома полями: ' +
+    '"name" (латиниця, малі літери, цифри й дефіси, до 64 символів), ' +
+    '"description" (одне-два речення: що робить Skill і коли його підключати, від 20 до 1024 символів), ' +
+    '"instructions" (markdown: заголовок і нумеровані кроки, які Claude виконує). ' +
+    'Мова description та instructions — така, якою ведеться розмова.';
+
+  var skills = [], msgs = [];
+  var settings = { apiKey: '', model: MODELS[0][0], activeId: null };
+  var DB = null, storageOK = false, busy = false, abortCtl = null;
+  var lastId = 0, editingId = null, drafting = false;
+
+  var list = $('#list'), input = $('#input'), sendBtn = $('#send'), applied = $('#applied');
+  var sheet = $('#sheet'), skillsSheet = $('#skillsSheet'), settingsSheet = $('#settingsSheet');
+  var skillsList = $('#skillsList');
+  var fName = $('#fName'), fDesc = $('#fDesc'), fBody = $('#fBody');
+  var tabFields = $('#tabFields'), tabMd = $('#tabMd'), paneFields = $('#paneFields'), paneMd = $('#paneMd'), mdOut = $('#mdOut');
+  var draftBtn = $('#draftBtn');
+
+  var SEND_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M5 9l5-5 5 5"/></svg>';
+  var STOP_SVG = '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="10" height="10" rx="2.5"/></svg>';
+  var EDIT_SVG = '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18l1-4L15 4l3 3L8 17l-4 1zM13 6l3 3"/></svg>';
+  var TRASH_SVG = '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h14M9 6V4h4v2M6 6l1 12h8l1-12"/></svg>';
+
+  function nextId(){ lastId = Math.max(lastId + 1, Date.now()); return lastId; }
+
+  /* ---------- Storage (IndexedDB) ---------- */
+  function openDB(){
+    return new Promise(function(resolve, reject){
+      if (!window.indexedDB) { reject(new Error('no indexedDB')); return; }
+      var r = indexedDB.open('verstak', 1);
+      r.onupgradeneeded = function(){
+        var db = r.result;
+        db.createObjectStore('skills', { keyPath: 'id' });
+        db.createObjectStore('messages', { keyPath: 'id' });
+        db.createObjectStore('meta', { keyPath: 'key' });
+      };
+      r.onsuccess = function(){ resolve(r.result); };
+      r.onerror = function(){ reject(r.error); };
+    });
+  }
+  function dbAll(store){
+    return new Promise(function(resolve, reject){
+      var q = DB.transaction(store, 'readonly').objectStore(store).getAll();
+      q.onsuccess = function(){ resolve(q.result); };
+      q.onerror = function(){ reject(q.error); };
+    });
+  }
+  function dbGet(store, key){
+    return new Promise(function(resolve, reject){
+      var q = DB.transaction(store, 'readonly').objectStore(store).get(key);
+      q.onsuccess = function(){ resolve(q.result); };
+      q.onerror = function(){ reject(q.error); };
+    });
+  }
+  function dbWrite(store, fn){
+    if (!storageOK) return Promise.resolve();
+    return new Promise(function(resolve){
+      var tx = DB.transaction(store, 'readwrite');
+      fn(tx.objectStore(store));
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = tx.onabort = function(){ console.warn('storage write failed', tx.error); resolve(); };
+    });
+  }
+  function dbPut(store, obj){ return dbWrite(store, function(s){ s.put(obj); }); }
+  function dbDel(store, key){ return dbWrite(store, function(s){ s.delete(key); }); }
+  function dbClear(store){ return dbWrite(store, function(s){ s.clear(); }); }
+  function saveSettings(){
+    return dbPut('meta', { key: 'settings', apiKey: settings.apiKey, model: settings.model, activeId: settings.activeId });
+  }
+
+  /* ---------- Markdown (escape first, then format) ---------- */
+  function esc(s){ return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function inline(raw){
+    return raw.split(/(`[^`]+`)/).map(function(part, i){
+      var t = esc(part);
+      if (i % 2 === 1) return '<code>' + t.slice(1, -1) + '</code>';
+      t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      t = t.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+      t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+      return t;
+    }).join('');
+  }
+  function renderMd(src){
+    var lines = src.replace(/\r\n/g, '\n').split('\n'), out = [], i = 0, l, buf, items;
+    var ul = /^\s*[-*]\s+/, ol = /^\s*\d+[.)]\s+/, hd = /^#{1,6}\s+/;
+    while (i < lines.length) {
+      l = lines[i];
+      if (/^```/.test(l)) {
+        buf = []; i++;
+        while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+        i++;
+        out.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+        continue;
+      }
+      if (/^\s*$/.test(l)) { i++; continue; }
+      if (hd.test(l)) { out.push('<h4>' + inline(l.replace(hd, '')) + '</h4>'); i++; continue; }
+      if (/^\s*([-*_])\1{2,}\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+      if (ul.test(l)) {
+        items = [];
+        while (i < lines.length && ul.test(lines[i])) { items.push('<li>' + inline(lines[i].replace(ul, '')) + '</li>'); i++; }
+        out.push('<ul>' + items.join('') + '</ul>'); continue;
+      }
+      if (ol.test(l)) {
+        items = [];
+        while (i < lines.length && ol.test(lines[i])) { items.push('<li>' + inline(lines[i].replace(ol, '')) + '</li>'); i++; }
+        out.push('<ol>' + items.join('') + '</ol>'); continue;
+      }
+      buf = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^```/.test(lines[i]) && !hd.test(lines[i]) && !ul.test(lines[i]) && !ol.test(lines[i])) {
+        buf.push(inline(lines[i])); i++;
+      }
+      if (!buf.length) { buf.push(inline(lines[i])); i++; }
+      out.push('<p>' + buf.join('<br>') + '</p>');
+    }
+    return out.join('');
+  }
+
+  /* ---------- Chat UI ---------- */
+  function nearBottom(){ return list.scrollHeight - list.scrollTop - list.clientHeight < 140; }
+  function scrollDown(force){
+    if (!force && !nearBottom()) return;
+    list.scrollTo({ top: list.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
+  }
+  function chip(bad){
+    var c = document.createElement('div');
+    c.className = 'chip' + (bad ? ' bad' : '');
+    c.setAttribute('aria-hidden', 'true');
+    c.textContent = bad ? '!' : 'C';
+    return c;
+  }
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function msgEl(m){
+    var d = el('div');
+    if (m.role === 'user') {
+      d.className = 'msg user';
+      if (m.skill) d.appendChild(el('span', 'pill name', m.skill));
+      d.appendChild(el('p', null, m.text));
+      return d;
+    }
+    d.className = 'msg claude';
+    d.appendChild(chip(m.role === 'error'));
+    var body = el('div', 'body');
+    if (m.role === 'assistant') {
+      var rich = el('div', 'rich');
+      rich.innerHTML = renderMd(m.text);
+      body.appendChild(rich);
+    } else if (m.role === 'card') {
+      var c = el('div', 'card');
+      c.setAttribute('role', 'group');
+      c.setAttribute('aria-label', 'Збережений Skill');
+      var row = el('div', 'row');
+      row.appendChild(el('h3', null, m.card.name));
+      row.appendChild(el('span', 'pill', 'Збережено'));
+      c.appendChild(row);
+      c.appendChild(el('p', 'sub', 'SKILL.md'));
+      c.appendChild(el('div', 'panel', m.card.desc));
+      var act = el('div', 'act');
+      var ab = el('button', 'btn skill', 'Застосувати в чаті');
+      ab.type = 'button'; ab.setAttribute('data-apply', m.card.id);
+      act.appendChild(ab); c.appendChild(act);
+      body.appendChild(c);
+    } else if (m.role === 'error') {
+      body.appendChild(el('p', 'errtext', m.text));
+      var ea = el('div', 'act');
+      var rb = el('button', 'btn', 'Повторити');
+      rb.type = 'button'; rb.setAttribute('data-act', 'retry');
+      ea.appendChild(rb);
+      if (m.settings) {
+        var sb = el('button', 'btn', 'Налаштування');
+        sb.type = 'button'; sb.setAttribute('data-act', 'settings');
+        ea.appendChild(sb);
+      }
+      body.appendChild(ea);
+    }
+    d.appendChild(body);
+    return d;
+  }
+
+  function renderAll(){
+    list.innerHTML = '';
+    if (!msgs.length) { showEmpty(); return; }
+    msgs.forEach(function(m){ list.appendChild(msgEl(m)); });
+    scrollDown(true);
+  }
+  function showEmpty(){
+    var e = el('div', 'empty');
+    e.id = 'empty';
+    e.appendChild(el('div', 'chip big', 'C'));
+    e.appendChild(el('p', null, 'Напишіть Claude, щоб почати. Повторювану процедуру можна зберегти як Skill кнопкою «Новий Skill».'));
+    list.appendChild(e);
+  }
+  function hideEmpty(){ var e = $('#empty'); if (e) e.remove(); }
+
+  function addMsg(m){
+    msgs.push(m);
+    hideEmpty();
+    list.appendChild(msgEl(m));
+    dbPut('messages', m);
+    scrollDown(true);
+  }
+
+  /* ---------- Skills state ---------- */
+  function findSkill(id){
+    for (var i = 0; i < skills.length; i++) if (skills[i].id === id) return skills[i];
+    return null;
+  }
+  function activeSkill(){ return settings.activeId ? findSkill(settings.activeId) : null; }
+  function updateApplied(){
+    var s = activeSkill();
+    applied.hidden = !s;
+    $('#appliedName').textContent = s ? s.name : '';
+    $('#unapply').setAttribute('aria-label', s ? 'Зняти Skill ' + s.name : 'Зняти Skill');
+  }
+  function applySkill(id){
+    if (!findSkill(id)) return;
+    settings.activeId = id; saveSettings(); updateApplied();
+    if (skillsSheet.open) skillsSheet.close();
+  }
+  function unapplySkill(){
+    settings.activeId = null; saveSettings(); updateApplied();
+    if (skillsSheet.open) renderSkills();
+  }
+
+  function renderSkills(){
+    skillsList.innerHTML = '';
+    if (!skills.length) {
+      skillsList.appendChild(el('p', 'note', 'Skills ще немає. Створіть перший: опишіть повторювану процедуру або складіть її з розмови.'));
+      return;
+    }
+    skills.forEach(function(s){
+      var on = settings.activeId === s.id;
+      var box = el('div', 'sk' + (on ? ' on' : ''));
+      var row = el('div', 'row');
+      row.appendChild(el('h3', null, s.name));
+      if (on) row.appendChild(el('span', 'pill', 'Підключено'));
+      box.appendChild(row);
+      box.appendChild(el('p', null, s.desc));
+      var tools = el('div', 'tools');
+      var b = el('button', on ? 'btn' : 'btn skill', on ? 'Зняти' : 'Застосувати');
+      b.type = 'button'; b.setAttribute('data-toggle', s.id);
+      var eb = el('button', 'icon-btn sm'); eb.type = 'button'; eb.innerHTML = EDIT_SVG;
+      eb.setAttribute('aria-label', 'Редагувати ' + s.name); eb.setAttribute('data-edit', s.id);
+      var db = el('button', 'icon-btn sm'); db.type = 'button'; db.innerHTML = TRASH_SVG;
+      db.setAttribute('aria-label', 'Видалити ' + s.name); db.setAttribute('data-del', s.id);
+      tools.appendChild(b); tools.appendChild(eb); tools.appendChild(db);
+      box.appendChild(tools);
+      skillsList.appendChild(box);
+    });
+  }
+
+  /* ---------- Claude API ---------- */
+  function apiHeaders(){
+    return {
+      'content-type': 'application/json',
+      'x-api-key': settings.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+  }
+  function ApiError(userMessage, status){ this.userMessage = userMessage; this.status = status; }
+  async function apiFail(res){
+    var detail = '';
+    try { var j = await res.json(); detail = j && j.error && j.error.message ? j.error.message : ''; } catch (e) {}
+    var s = res.status, msg;
+    if (s === 401) msg = 'Ключ API не підійшов. Перевірте його в налаштуваннях.';
+    else if (s === 403) msg = 'Цьому ключу заборонено доступ до запиту.';
+    else if (s === 404) msg = 'Модель не знайдено. Оберіть іншу в налаштуваннях.';
+    else if (s === 429) msg = 'Забагато запитів або вичерпано ліміт. Спробуйте за хвилину.';
+    else if (s >= 500) msg = 'Сервіс Claude тимчасово перевантажений. Спробуйте ще раз.';
+    else msg = 'Запит відхилено (' + s + ')' + (detail ? ': ' + detail : '.');
+    return new ApiError(msg, s);
+  }
+  function friendly(e){
+    if (e && e.userMessage) return e.userMessage;
+    if (e && e.message === 'parse') return 'Не вдалося розібрати чернетку. Спробуйте ще раз.';
+    if (e instanceof TypeError) return 'Немає зв\u2019язку з api.anthropic.com. Перевірте інтернет і спробуйте ще раз.';
+    return 'Щось пішло не так. Спробуйте ще раз.';
+  }
+
+  async function callClaude(opts){
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ model: settings.model, max_tokens: opts.max_tokens || 2000, system: opts.system, messages: opts.messages })
+    });
+    if (!res.ok) throw await apiFail(res);
+    var data = await res.json();
+    return (data.content || []).filter(function(b){ return b.type === 'text'; }).map(function(b){ return b.text; }).join('');
+  }
+
+  async function streamClaude(opts){
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: apiHeaders(), signal: opts.signal,
+      body: JSON.stringify({ model: settings.model, max_tokens: 4096, system: opts.system, messages: opts.messages, stream: true })
+    });
+    if (!res.ok) throw await apiFail(res);
+    var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+    function handle(chunk){
+      chunk.split('\n').forEach(function(line){
+        if (line.indexOf('data:') !== 0) return;
+        var raw = line.slice(5).trim();
+        if (!raw) return;
+        var ev; try { ev = JSON.parse(raw); } catch (e) { return; }
+        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') opts.onDelta(ev.delta.text);
+        else if (ev.type === 'error') throw new ApiError('Сервіс Claude повернув помилку' + (ev.error && ev.error.message ? ': ' + ev.error.message : '.'), 0);
+      });
+    }
+    for (;;) {
+      var r = await reader.read();
+      if (r.done) break;
+      buf += dec.decode(r.value, { stream: true }).replace(/\r\n/g, '\n');
+      var idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, idx)); buf = buf.slice(idx + 2); }
+    }
+    if (buf.trim()) handle(buf);
+  }
+
+  function apiMessages(){
+    var out = [];
+    msgs.forEach(function(m){
+      if ((m.role === 'user' || m.role === 'assistant') && m.text) {
+        var last = out[out.length - 1];
+        if (last && last.role === m.role) last.content += '\n\n' + m.text;
+        else out.push({ role: m.role, content: m.text });
+      }
+    });
+    out = out.slice(-40);
+    while (out.length && out[0].role !== 'user') out.shift();
+    return out;
+  }
+  function buildSystem(){
+    var s = activeSkill();
+    if (!s) return BASE_SYSTEM;
+    return BASE_SYSTEM + '\n\nЗастосовано Skill «' + s.name + '».\nОпис: ' + s.desc +
+      '\n\nІнструкції Skill:\n' + s.body + '\n\nСлідуй цим інструкціям, доки Skill застосовано.';
+  }
+
+  function updateSend(){
+    sendBtn.innerHTML = busy ? STOP_SVG : SEND_SVG;
+    sendBtn.setAttribute('aria-label', busy ? 'Зупинити' : 'Надіслати');
+    sendBtn.disabled = busy ? false : !input.value.trim();
+  }
+  function autosize(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    updateSend();
+  }
+
+  async function runChat(){
+    busy = true; updateSend(); hideEmpty();
+    var am = { id: nextId(), role: 'assistant', text: '' };
+    var node = msgEl(am), rich = node.querySelector('.rich');
+    rich.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+    list.appendChild(node); scrollDown(true);
+    abortCtl = new AbortController();
+    var raf = 0;
+    function paint(){ raf = 0; rich.innerHTML = renderMd(am.text); scrollDown(false); }
+    var failure = null;
+    try {
+      await streamClaude({
+        system: buildSystem(), messages: apiMessages(), signal: abortCtl.signal,
+        onDelta: function(t){ am.text += t; if (!raf) raf = requestAnimationFrame(paint); }
+      });
+    } catch (e) {
+      if (!(e && e.name === 'AbortError')) failure = e;
+    }
+    if (raf) cancelAnimationFrame(raf);
+    if (am.text) {
+      rich.innerHTML = renderMd(am.text);
+      msgs.push(am); dbPut('messages', am);
+    } else {
+      node.remove();
+      if (!failure && abortCtl && abortCtl.signal.aborted === false) failure = new ApiError('Claude повернув порожню відповідь.', 0);
+    }
+    abortCtl = null; busy = false; updateSend();
+    if (failure) {
+      // transient error bubble, not stored
+      var holder = msgEl({ role: 'error', text: friendly(failure), settings: !!(failure.status === 401 || failure.status === 404) });
+      holder.setAttribute('data-error', '1');
+      list.appendChild(holder);
+    }
+    if (!msgs.length && !failure) showEmpty();
+    scrollDown(true);
+  }
+
+  async function send(){
+    if (busy) { if (abortCtl) abortCtl.abort(); return; }
+    var v = input.value.trim();
+    if (!v) return;
+    if (!settings.apiKey) { openSettings('Додайте ключ API, щоб надсилати повідомлення.'); return; }
+    var s = activeSkill();
+    addMsg({ id: nextId(), role: 'user', text: v, skill: s ? s.name : null });
+    input.value = ''; autosize();
+    await runChat();
+  }
+
+  input.addEventListener('input', autosize);
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+  });
+  sendBtn.addEventListener('click', send);
+
+  list.addEventListener('click', function(e){
+    var a = e.target.closest('[data-apply]');
+    if (a) { applySkill(a.getAttribute('data-apply')); return; }
+    var act = e.target.closest('[data-act]');
+    if (!act) return;
+    var holder = act.closest('[data-error]');
+    if (act.getAttribute('data-act') === 'retry') {
+      if (holder) holder.remove();
+      if (!busy) runChat();
+    } else if (act.getAttribute('data-act') === 'settings') {
+      openSettings();
+    }
+  });
+
+  /* ---------- Skill sheet ---------- */
+  function slug(s){
+    return s.toLowerCase().trim().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 64);
+  }
+  function buildMd(){
+    return '---\nname: ' + slug(fName.value) + '\ndescription: ' + fDesc.value.trim() + '\n---\n\n' + fBody.value.trim() + '\n';
+  }
+  function setTab(which){
+    var f = which === 'fields';
+    tabFields.setAttribute('aria-selected', String(f));
+    tabMd.setAttribute('aria-selected', String(!f));
+    paneFields.hidden = !f;
+    paneMd.hidden = f;
+    if (!f) mdOut.textContent = buildMd();
+  }
+  tabFields.addEventListener('click', function(){ setTab('fields'); });
+  tabMd.addEventListener('click', function(){ setTab('md'); });
+
+  function clearErrors(){
+    ['Name', 'Desc', 'Body'].forEach(function(k){
+      $('#err' + k).hidden = true;
+      $('#cell' + k).classList.remove('bad');
+    });
+  }
+  function showError(k, text){
+    var e = $('#err' + k);
+    e.textContent = text; e.hidden = false;
+    $('#cell' + k).classList.add('bad');
+  }
+  function showNotice(text){
+    var n = $('#notice');
+    n.textContent = text || ''; n.hidden = !text;
+  }
+  function updateCount(){ $('#descCount').textContent = fDesc.value.length + ' / 1024'; }
+  fDesc.addEventListener('input', updateCount);
+  fName.addEventListener('blur', function(){ fName.value = slug(fName.value); });
+
+  function openSkillSheet(skill, withDraft){
+    clearErrors(); showNotice('');
+    editingId = skill ? skill.id : null;
+    $('#sheetTitle').textContent = skill ? 'Редагувати Skill' : 'Новий Skill';
+    fName.value = skill ? skill.name : '';
+    fDesc.value = skill ? skill.desc : '';
+    fBody.value = skill ? skill.body : '';
+    updateCount(); setTab('fields');
+    if (skillsSheet.open) skillsSheet.close();
+    if (!sheet.open) sheet.showModal();
+    if (withDraft) draftFromChat();
+  }
+
+  function parseJson(t){
+    var a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a < 0 || b <= a) throw new Error('parse');
+    var o;
+    try { o = JSON.parse(t.slice(a, b + 1)); } catch (e) { throw new Error('parse'); }
+    if (!o || typeof o.name !== 'string' || typeof o.description !== 'string' || typeof o.instructions !== 'string') throw new Error('parse');
+    return o;
+  }
+
+  async function draftFromChat(){
+    if (drafting) return;
+    showNotice('');
+    var convo = msgs.filter(function(m){ return (m.role === 'user' || m.role === 'assistant') && m.text; }).slice(-30);
+    if (!convo.length) { showNotice('Спершу поспілкуйтеся з Claude: Skill складається з розмови.'); return; }
+    if (!settings.apiKey) { showNotice('Додайте ключ API в налаштуваннях, щоб складати Skill з розмови.'); return; }
+    drafting = true; draftBtn.disabled = true; draftBtn.textContent = 'Складаю…';
+    try {
+      var transcript = convo.map(function(m){
+        return (m.role === 'user' ? 'Користувач: ' : 'Claude: ') + m.text.slice(0, 4000);
+      }).join('\n\n');
+      var text = await callClaude({
+        system: DRAFT_SYSTEM, max_tokens: 2000,
+        messages: [{ role: 'user', content: 'Розмова:\n\n' + transcript + '\n\nСклади Skill.' }]
+      });
+      var o = parseJson(text);
+      fName.value = slug(o.name);
+      fDesc.value = o.description.trim().slice(0, 1024);
+      fBody.value = o.instructions.trim();
+      updateCount(); clearErrors();
+      if (!paneMd.hidden) mdOut.textContent = buildMd();
+    } catch (e) {
+      showNotice(friendly(e));
+    } finally {
+      drafting = false; draftBtn.disabled = false; draftBtn.textContent = 'Скласти з розмови';
+    }
+  }
+  draftBtn.addEventListener('click', draftFromChat);
+
+  $('#saveBtn').addEventListener('click', function(){
+    setTab('fields'); clearErrors();
+    var name = slug(fName.value), desc = fDesc.value.trim(), body = fBody.value.trim();
+    var first = null;
+    var dup = skills.some(function(s){ return s.name === name && s.id !== editingId; });
+    if (!name) { showError('Name', 'Додайте назву латиницею: малі літери, цифри й дефіси, наприклад pr-review.'); first = first || fName; }
+    else if (dup) { showError('Name', 'Skill із такою назвою вже є. Змініть назву.'); first = first || fName; }
+    if (desc.length < 20) { showError('Desc', 'Опишіть, коли Claude має підключати Skill. Потрібно хоча б 20 символів.'); first = first || fDesc; }
+    else if (desc.length > 1024) { showError('Desc', 'Скоротіть опис до 1024 символів.'); first = first || fDesc; }
+    if (!body) { showError('Body', 'Додайте інструкції: що Claude має робити, коли Skill підключено.'); first = first || fBody; }
+    if (first) { first.focus(); return; }
+    if (editingId) {
+      var s = findSkill(editingId);
+      s.name = name; s.desc = desc; s.body = body;
+      dbPut('skills', s);
+      updateApplied();
+      sheet.close();
+    } else {
+      var ns = { id: 's' + nextId(), name: name, desc: desc, body: body, ts: Date.now() };
+      skills.unshift(ns);
+      dbPut('skills', ns);
+      sheet.close();
+      addMsg({ id: nextId(), role: 'card', card: { id: ns.id, name: name, desc: desc } });
+    }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  });
+
+  /* ---------- Skills list wiring ---------- */
+  $('#newBtn').addEventListener('click', function(){ openSkillSheet(null, false); });
+  $('#newFromList').addEventListener('click', function(){ openSkillSheet(null, false); });
+  $('#openSkills').addEventListener('click', function(){ renderSkills(); skillsSheet.showModal(); });
+  $('#unapply').addEventListener('click', unapplySkill);
+  skillsList.addEventListener('click', function(e){
+    var t = e.target.closest('[data-toggle]');
+    if (t) {
+      var id = t.getAttribute('data-toggle');
+      if (settings.activeId === id) unapplySkill(); else applySkill(id);
+      return;
+    }
+    var ed = e.target.closest('[data-edit]');
+    if (ed) { var s = findSkill(ed.getAttribute('data-edit')); if (s) openSkillSheet(s, false); return; }
+    var dl = e.target.closest('[data-del]');
+    if (dl) {
+      var sk = findSkill(dl.getAttribute('data-del'));
+      if (!sk || !window.confirm('Видалити Skill «' + sk.name + '»?')) return;
+      skills = skills.filter(function(x){ return x.id !== sk.id; });
+      dbDel('skills', sk.id);
+      if (settings.activeId === sk.id) { settings.activeId = null; saveSettings(); updateApplied(); }
+      renderSkills();
+    }
+  });
+
+  /* ---------- Settings ---------- */
+  function setSetNotice(text){
+    var n = $('#setNotice');
+    n.textContent = text || ''; n.hidden = !text;
+  }
+  function openSettings(notice){
+    $('#errKey').hidden = true; $('#cellKey').classList.remove('bad');
+    setSetNotice(notice || '');
+    $('#fKey').value = settings.apiKey;
+    $('#fModel').value = settings.model;
+    $('#storageNote').hidden = storageOK;
+    if (skillsSheet.open) skillsSheet.close();
+    if (!settingsSheet.open) settingsSheet.showModal();
+  }
+  $('#openSettings').addEventListener('click', function(){ openSettings(); });
+
+  var modelSel = $('#fModel');
+  MODELS.forEach(function(m){
+    var o = el('option', null, m[1]); o.value = m[0]; modelSel.appendChild(o);
+  });
+
+  $('#saveSettings').addEventListener('click', function(){
+    var key = $('#fKey').value.trim();
+    if (key && key.indexOf('sk-ant-') !== 0) {
+      var e = $('#errKey');
+      e.textContent = 'Ключ має починатися з sk-ant-. Скопіюйте його з консолі Anthropic ще раз.';
+      e.hidden = false; $('#cellKey').classList.add('bad'); $('#fKey').focus();
+      return;
+    }
+    settings.apiKey = key;
+    settings.model = modelSel.value;
+    saveSettings();
+    settingsSheet.close();
+  });
+
+  function today(){ return new Date().toISOString().slice(0, 10); }
+  $('#exportBtn').addEventListener('click', async function(){
+    var data = { app: 'verstak', version: 1, exportedAt: new Date().toISOString(), model: settings.model, skills: skills, messages: msgs };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var name = 'verstak-backup-' + today() + '.json';
+    try {
+      var file = new File([blob], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Верстак' });
+        return;
+      }
+    } catch (err) { if (err && err.name === 'AbortError') return; }
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  });
+
+  $('#importBtn').addEventListener('click', function(){ $('#importFile').click(); });
+  $('#importFile').addEventListener('change', async function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      var d = JSON.parse(await f.text());
+      if (!d || d.app !== 'verstak' || !Array.isArray(d.skills) || !Array.isArray(d.messages)) throw new Error('bad');
+      if (!window.confirm('Імпорт замінить поточні Skills і розмову. Продовжити?')) return;
+      skills = d.skills.filter(function(s){ return s && s.id && s.name; });
+      msgs = d.messages.filter(function(m){ return m && m.id && m.role; });
+      msgs.concat(skills).forEach(function(x){ if (typeof x.id === 'number') lastId = Math.max(lastId, x.id); });
+      await dbClear('skills'); await dbClear('messages');
+      for (var i = 0; i < skills.length; i++) await dbPut('skills', skills[i]);
+      for (var j = 0; j < msgs.length; j++) await dbPut('messages', msgs[j]);
+      if (settings.activeId && !findSkill(settings.activeId)) { settings.activeId = null; saveSettings(); }
+      updateApplied(); renderAll();
+      setSetNotice('Імпортовано: Skills — ' + skills.length + ', повідомлень — ' + msgs.length + '.');
+    } catch (err) {
+      setSetNotice('Не вдалося імпортувати: це не файл резервної копії Верстака.');
+    }
+  });
+
+  $('#clearBtn').addEventListener('click', async function(){
+    if (!window.confirm('Очистити всю розмову? Skills залишаться.')) return;
+    msgs = []; await dbClear('messages'); renderAll();
+    settingsSheet.close();
+  });
+
+  /* ---------- Dialog plumbing ---------- */
+  document.addEventListener('click', function(e){
+    var c = e.target.closest('[data-close]');
+    if (c) { var d = document.getElementById(c.getAttribute('data-close')); if (d) d.close(); return; }
+    if (e.target.tagName === 'DIALOG') e.target.close();
+  });
+
+  /* ---------- Start ---------- */
+  async function init(){
+    try {
+      DB = await openDB();
+      storageOK = true;
+      skills = await dbAll('skills');
+      msgs = await dbAll('messages');
+      var meta = await dbGet('meta', 'settings');
+      if (meta) {
+        settings.apiKey = meta.apiKey || '';
+        settings.model = meta.model || settings.model;
+        settings.activeId = meta.activeId || null;
+      }
+    } catch (e) {
+      storageOK = false;
+    }
+    skills.sort(function(a, b){ return b.ts - a.ts; });
+    msgs.sort(function(a, b){ return a.id - b.id; });
+    msgs.concat(skills).forEach(function(x){ if (typeof x.id === 'number') lastId = Math.max(lastId, x.id); });
+    if (!findSkill(settings.activeId)) settings.activeId = null;
+    updateApplied(); renderAll(); updateSend();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  }
+  init();
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  }
+})();
+</script>
+</body>
+</html>
