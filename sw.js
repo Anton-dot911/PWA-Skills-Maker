@@ -1,6 +1,6 @@
 /* Service worker: caches the app shell so Верстак opens offline.
    API calls (api.anthropic.com) are cross-origin and are never touched here. */
-const CACHE = 'verstak-v2';
+const CACHE = 'verstak-v4';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

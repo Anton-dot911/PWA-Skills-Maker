@@ -353,7 +353,14 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       <label class="lab" for="fModel">Модель</label>
       <select id="fModel"></select>
     </div>
+    <div class="cell" id="cellMaster">
+      <label class="lab" for="fMaster">Промпт майстра Skills <em id="masterState">типовий</em></label>
+      <textarea id="fMaster" class="tall" spellcheck="false"></textarea>
+      <div class="err" id="errMaster" hidden></div>
+    </div>
+    <p class="note">Цей промпт керує кнопкою «Скласти з розмови». Формат відповіді (JSON) додається автоматично, тож описувати його не треба.</p>
     <div class="stack">
+      <button class="btn wide" id="resetMaster" type="button">Скинути промпт майстра до типового</button>
       <button class="btn wide" id="exportBtn" type="button">Експортувати Skills, документи й розмову</button>
       <button class="btn wide" id="importBtn" type="button">Імпортувати з файлу</button>
       <button class="btn wide" id="clearBtn" type="button">Очистити розмову</button>
@@ -378,15 +385,26 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5']
   ];
   var BASE_SYSTEM = 'Ти — Claude у застосунку «Верстак». Відповідай мовою користувача, чітко й без зайвих вступів.';
-  var DRAFT_SYSTEM = 'Ти допомагаєш скласти Skill для Claude на основі розмови. Skill — це повторювана процедура. ' +
-    'Поверни лише JSON-об\u2019єкт без пояснень і без markdown-огорожі, з трьома полями: ' +
-    '"name" (латиниця, малі літери, цифри й дефіси, до 64 символів), ' +
-    '"description" (одне-два речення: що робить Skill і коли його підключати, від 20 до 1024 символів), ' +
-    '"instructions" (markdown: заголовок і нумеровані кроки, які Claude виконує). ' +
-    'Мова description та instructions — така, якою ведеться розмова.';
+  var DRAFT_BODY = `Ти майстер Skills. Skill це файл SKILL.md: Claude завжди бачить лише назву й опис, а повні інструкції підключає, коли завдання збігається з описом. Твоя мета: допомогти створити Skill, який спрацьовує вчасно і дає стабільний результат.
+
+Спершу зрозумій задум
+Якщо розмова вже містить процедуру, яку користувач хоче зберегти, витягни з неї кроки, формати вхідних і вихідних даних та виправлення користувача. Зверни увагу, коли Skill має спрацьовувати, який очікуваний результат, які крайні випадки і що вважати успіхом.
+
+Опис
+Опис є головним механізмом підключення, тому все про «коли застосовувати» пиши тут, а не в інструкціях. Вкажи, що Skill робить і в яких ситуаціях його підключати, назви характерні слова й контексти, навіть коли користувач не називає завдання прямо. Claude схильний підключати Skills надто рідко, тож формулюй трохи наполегливо: «Використовуй, щоразу коли...». До 1024 символів.
+
+Інструкції
+Пиши наказовим способом. Пояснюй, чому крок важливий: так Claude діятиме розумно в непередбачених ситуаціях краще, ніж від суворих заборон. Пиши загально, не під один приклад. Якщо результат має бути стабільним, задай шаблон формату й додай один-два короткі приклади. Прибери все, що не змінює поведінку Claude. Не додавай нічого, що здивувало б користувача, коли він прочитає опис.
+
+Перед відповіддю перевір
+Чи опис збігається з тим, що роблять інструкції? Чи кожен крок зрозумілий без додаткових припущень? Чи пройде Skill на 2–3 запитах, які користувач справді сказав би?
+
+Назва: латиниця, малі літери, цифри, дефіси, до 64 символів. Мова опису та інструкцій: мова розмови.`;
+  var DRAFT_TAIL = `Зараз ти працюєш у режимі чернетки й не можеш ставити запитання. Склади найкращу чернетку з розмови. Поверни лише JSON-об'єкт без markdown-огорожі з чотирма полями: name, description, instructions і notes. У notes (1–2 речення мовою розмови) назви припущення, які ти зробив, і що користувачеві варто перевірити або уточнити; якщо нічого, залиш порожній рядок.`;
+  function effectiveMaster(){ return (settings.masterPrompt || '').trim() ? settings.masterPrompt.trim() : DRAFT_BODY; }
 
   var skills = [], msgs = [], docs = [], pending = [];
-  var settings = { apiKey: '', model: MODELS[0][0], activeId: null, systemPrompt: '' };
+  var settings = { apiKey: '', model: MODELS[0][0], activeId: null, systemPrompt: '', masterPrompt: '' };
   var DB = null, storageOK = false, busy = false, abortCtl = null;
   var lastId = 0, editingId = null, drafting = false;
 
@@ -447,7 +465,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   function dbDel(store, key){ return dbWrite(store, function(s){ s.delete(key); }); }
   function dbClear(store){ return dbWrite(store, function(s){ s.clear(); }); }
   function saveSettings(){
-    return dbPut('meta', { key: 'settings', apiKey: settings.apiKey, model: settings.model, activeId: settings.activeId, systemPrompt: settings.systemPrompt });
+    return dbPut('meta', { key: 'settings', apiKey: settings.apiKey, model: settings.model, activeId: settings.activeId, systemPrompt: settings.systemPrompt, masterPrompt: settings.masterPrompt });
   }
 
   /* ---------- Markdown (escape first, then format) ---------- */
@@ -903,7 +921,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
         return (m.role === 'user' ? 'Користувач: ' : 'Claude: ') + m.text.slice(0, 4000);
       }).join('\n\n');
       var text = await callClaude({
-        system: DRAFT_SYSTEM, max_tokens: 2000,
+        system: effectiveMaster() + '\n\n' + DRAFT_TAIL, max_tokens: 2000,
         messages: [{ role: 'user', content: 'Розмова:\n\n' + transcript + '\n\nСклади Skill.' }]
       });
       var o = parseJson(text);
@@ -912,6 +930,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       fBody.value = o.instructions.trim();
       updateCount(); clearErrors();
       if (!paneMd.hidden) mdOut.textContent = buildMd();
+      showNotice(typeof o.notes === 'string' && o.notes.trim() ? o.notes.trim() : 'Чернетку складено. Перегляньте її перед збереженням.');
     } catch (e) {
       showNotice(friendly(e));
     } finally {
@@ -982,6 +1001,9 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     setSetNotice(notice || '');
     $('#fKey').value = settings.apiKey;
     $('#fModel').value = settings.model;
+    $('#fMaster').value = effectiveMaster();
+    $('#errMaster').hidden = true; $('#cellMaster').classList.remove('bad');
+    updateMasterState();
     $('#storageNote').hidden = storageOK;
     if (libSheet.open) libSheet.close();
     if (!settingsSheet.open) settingsSheet.showModal();
@@ -1001,15 +1023,34 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       e.hidden = false; $('#cellKey').classList.add('bad'); $('#fKey').focus();
       return;
     }
+    var mv = $('#fMaster').value;
+    if (mv.length > 8000) {
+      var me = $('#errMaster');
+      me.textContent = 'Промпт завеликий: ліміт 8000 символів.';
+      me.hidden = false; $('#cellMaster').classList.add('bad'); $('#fMaster').focus();
+      return;
+    }
     settings.apiKey = key;
     settings.model = modelSel.value;
+    settings.masterPrompt = (!mv.trim() || mv.trim() === DRAFT_BODY.trim()) ? '' : mv;
     saveSettings();
     settingsSheet.close();
   });
 
+  function updateMasterState(){
+    var v = $('#fMaster').value.trim();
+    $('#masterState').textContent = (!v || v === DRAFT_BODY.trim()) ? 'типовий' : 'змінено';
+  }
+  $('#fMaster').addEventListener('input', updateMasterState);
+  $('#resetMaster').addEventListener('click', function(){
+    $('#fMaster').value = DRAFT_BODY;
+    updateMasterState();
+    setSetNotice('Типовий промпт повернуто. Натисніть «Зберегти», щоб застосувати.');
+  });
+
   function today(){ return new Date().toISOString().slice(0, 10); }
   $('#exportBtn').addEventListener('click', async function(){
-    var data = { app: 'verstak', version: 2, exportedAt: new Date().toISOString(), model: settings.model, systemPrompt: settings.systemPrompt, docs: docs, skills: skills, messages: msgs.map(stripFiles) };
+    var data = { app: 'verstak', version: 2, exportedAt: new Date().toISOString(), model: settings.model, systemPrompt: settings.systemPrompt, masterPrompt: settings.masterPrompt, docs: docs, skills: skills, messages: msgs.map(stripFiles) };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var name = 'verstak-backup-' + today() + '.json';
     try {
@@ -1038,6 +1079,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       msgs = d.messages.filter(function(m){ return m && m.id && m.role; });
       docs = Array.isArray(d.docs) ? d.docs.filter(function(x){ return x && x.id && x.name && typeof x.text === 'string'; }) : [];
       settings.systemPrompt = typeof d.systemPrompt === 'string' ? d.systemPrompt : '';
+      settings.masterPrompt = typeof d.masterPrompt === 'string' ? d.masterPrompt : '';
       msgs.concat(skills).forEach(function(x){ if (typeof x.id === 'number') lastId = Math.max(lastId, x.id); });
       await dbClear('skills'); await dbClear('messages'); await dbClear('docs');
       for (var i = 0; i < skills.length; i++) await dbPut('skills', skills[i]);
@@ -1381,6 +1423,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
         settings.model = meta.model || settings.model;
         settings.activeId = meta.activeId || null;
         settings.systemPrompt = meta.systemPrompt || '';
+        settings.masterPrompt = meta.masterPrompt || '';
       }
     } catch (e) {
       storageOK = false;
