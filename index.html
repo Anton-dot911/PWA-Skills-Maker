@@ -154,6 +154,23 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
 .sk .tools{display:flex;align-items:center;gap:10px}
 .sk .tools .btn{min-height:42px;padding:0 16px;flex:1}
 
+[hidden]{display:none!important}
+.pending{display:flex;flex-wrap:wrap;gap:8px;margin:0 6px 10px}
+.pending:empty{display:none}
+.att{display:inline-flex;align-items:center;max-width:100%;padding:2px 2px 2px 12px;border-radius:999px;background:var(--paper);font:700 13px/1.3 var(--font)}
+.att span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px}
+.att button{width:36px;height:34px;flex:none;border:0;background:transparent;display:grid;place-items:center;border-radius:999px;cursor:pointer}
+.att svg{width:14px;height:14px}
+.ctxbar{display:block;width:fit-content;max-width:100%;margin:0 6px 10px;padding:7px 14px;border:0;border-radius:999px;background:var(--sand);box-shadow:var(--press);font:700 13px/1.3 var(--font);color:var(--muted);cursor:pointer;text-align:left}
+.attnote{margin:0 6px 10px;padding:10px 14px;border-radius:16px;background:var(--paper);font-size:13.5px}
+.files{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.thumb{width:72px;height:72px;border-radius:16px;object-fit:cover;display:block;background:var(--sand)}
+.filetag{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:var(--sand);font:700 13px/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sk .meta{margin:4px 0 12px;font-size:13px;color:var(--muted)}
+.cell textarea.mid{min-height:130px}
+.attach-btn{width:46px;height:46px;flex:none;border:0;border-radius:20px;background:var(--sand);box-shadow:var(--raise);display:grid;place-items:center;cursor:pointer}
+.attach-btn:active{box-shadow:var(--press)}
+.attach-btn svg{width:22px;height:22px}
 @media (max-width:360px){.top .lbl{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -175,6 +192,9 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   <main class="list" id="list" aria-live="polite" aria-label="Розмова з Claude"></main>
 
   <div class="composer">
+    <button class="ctxbar" id="ctxbar" type="button" hidden></button>
+    <div class="attnote" id="attNote" role="alert" hidden></div>
+    <div class="pending" id="pending"></div>
     <div class="applied" id="applied" hidden>
       <span id="appliedName"></span>
       <button type="button" id="unapply" aria-label="Зняти Skill">
@@ -182,12 +202,16 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       </button>
     </div>
     <div class="box">
-      <button class="skills-btn" id="openSkills" type="button" aria-label="Skills">
+      <button class="skills-btn" id="openSkills" type="button" aria-label="Skills і контекст">
         <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="2"/><rect x="12" y="3.5" width="6.5" height="6.5" rx="2"/><rect x="3.5" y="12" width="6.5" height="6.5" rx="2"/><rect x="12" y="12" width="6.5" height="6.5" rx="2"/></svg>
+      </button>
+      <button class="attach-btn" id="attachBtn" type="button" aria-label="Прикріпити файл">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
       <textarea id="input" rows="1" placeholder="Напишіть Claude" aria-label="Повідомлення"></textarea>
       <button class="send" id="send" type="button" aria-label="Надіслати" disabled></button>
     </div>
+    <input type="file" id="attachFile" multiple hidden accept="image/*,application/pdf,.pdf,.txt,.md,.markdown,.json,.csv,.tsv,.xml,.yml,.yaml,text/*">
   </div>
 </div>
 </div>
@@ -236,20 +260,73 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   </div>
 </dialog>
 
-<!-- Skills list -->
-<dialog id="skillsSheet" aria-labelledby="skillsTitle">
+<!-- Library: Skills and context -->
+<dialog id="libSheet" aria-labelledby="libTitle">
   <div class="sheet-head">
     <div>
-      <h2 id="skillsTitle">Skills</h2>
-      <p>Застосований Skill діє в чаті, доки ви його не знімете.</p>
+      <h2 id="libTitle">Бібліотека</h2>
+      <p>Skills і постійний контекст для Claude.</p>
     </div>
-    <button class="close" data-close="skillsSheet" type="button" aria-label="Закрити">
+    <button class="close" data-close="libSheet" type="button" aria-label="Закрити">
       <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
     </button>
   </div>
-  <div class="sheet-body" id="skillsList"></div>
-  <div class="actions one">
+  <div class="seg" role="tablist" aria-label="Розділ">
+    <button type="button" role="tab" id="libTabSkills" aria-selected="true" aria-controls="paneSkills">Skills</button>
+    <button type="button" role="tab" id="libTabContext" aria-selected="false" aria-controls="paneContext">Контекст</button>
+  </div>
+  <div class="sheet-body">
+    <div id="paneSkills" role="tabpanel" aria-labelledby="libTabSkills">
+      <p class="note">Застосований Skill діє в чаті, доки ви його не знімете.</p>
+      <div id="skillsList"></div>
+    </div>
+    <div id="paneContext" role="tabpanel" aria-labelledby="libTabContext" hidden>
+      <div class="notice" id="ctxNote" role="alert" hidden></div>
+      <div class="cell">
+        <label class="lab" for="sysPrompt">Інструкції <em>системний промпт</em></label>
+        <textarea id="sysPrompt" class="mid" placeholder="Як Claude має відповідати завжди: роль, тон, правила"></textarea>
+      </div>
+      <p class="note" id="ctxTotal"></p>
+      <div id="docsList"></div>
+    </div>
+  </div>
+  <div class="actions one" id="actSkills">
     <button class="btn primary" id="newFromList" type="button">Новий Skill</button>
+  </div>
+  <div class="actions" id="actContext" hidden>
+    <button class="btn" id="addDocFile" type="button">Додати файл</button>
+    <button class="btn primary" id="newDoc" type="button">Новий документ</button>
+  </div>
+  <input type="file" id="docFile" multiple hidden accept=".md,.markdown,.txt,.json,.csv,.tsv,.xml,.yml,.yaml,text/*">
+</dialog>
+
+<!-- Context document -->
+<dialog id="docSheet" aria-labelledby="docTitle">
+  <div class="sheet-head">
+    <div>
+      <h2 id="docTitle">Новий документ</h2>
+      <p>Claude бачитиме його в кожній розмові, поки він увімкнений.</p>
+    </div>
+    <button class="close" data-close="docSheet" type="button" aria-label="Закрити">
+      <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l12 12M17 5L5 17"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="notice" id="dNotice" role="alert" hidden></div>
+    <div class="cell" id="cellDName">
+      <label class="lab" for="dName">Назва</label>
+      <input id="dName" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="STATE.md">
+      <div class="err" id="errDName" hidden></div>
+    </div>
+    <div class="cell" id="cellDText">
+      <label class="lab" for="dText">Вміст <em id="dCount">0 символів</em></label>
+      <textarea id="dText" class="tall" placeholder="Мета, ухвалені рішення, специфікація, правила"></textarea>
+      <div class="err" id="errDText" hidden></div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="dDraft" type="button">Оновити з розмови</button>
+    <button class="btn primary" id="dSave" type="button">Зберегти</button>
   </div>
 </dialog>
 
@@ -271,13 +348,13 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       <input id="fKey" class="mono" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="sk-ant-…">
       <div class="err" id="errKey" hidden></div>
     </div>
-    <p class="note">Ключ надсилається лише на api.anthropic.com і не потрапляє в експорт. Хто має доступ до цього пристрою, може його прочитати, тож використовуйте ключ із лімітом витрат.</p>
+    <p class="note">Ключ надсилається лише на api.anthropic.com. Ні ключ, ні вкладення в експорт не потрапляють. Хто має доступ до цього пристрою, може його прочитати, тож використовуйте ключ із лімітом витрат.</p>
     <div class="cell">
       <label class="lab" for="fModel">Модель</label>
       <select id="fModel"></select>
     </div>
     <div class="stack">
-      <button class="btn wide" id="exportBtn" type="button">Експортувати Skills і розмову</button>
+      <button class="btn wide" id="exportBtn" type="button">Експортувати Skills, документи й розмову</button>
       <button class="btn wide" id="importBtn" type="button">Імпортувати з файлу</button>
       <button class="btn wide" id="clearBtn" type="button">Очистити розмову</button>
     </div>
@@ -308,13 +385,13 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     '"instructions" (markdown: заголовок і нумеровані кроки, які Claude виконує). ' +
     'Мова description та instructions — така, якою ведеться розмова.';
 
-  var skills = [], msgs = [];
-  var settings = { apiKey: '', model: MODELS[0][0], activeId: null };
+  var skills = [], msgs = [], docs = [], pending = [];
+  var settings = { apiKey: '', model: MODELS[0][0], activeId: null, systemPrompt: '' };
   var DB = null, storageOK = false, busy = false, abortCtl = null;
   var lastId = 0, editingId = null, drafting = false;
 
   var list = $('#list'), input = $('#input'), sendBtn = $('#send'), applied = $('#applied');
-  var sheet = $('#sheet'), skillsSheet = $('#skillsSheet'), settingsSheet = $('#settingsSheet');
+  var sheet = $('#sheet'), libSheet = $('#libSheet'), settingsSheet = $('#settingsSheet');
   var skillsList = $('#skillsList');
   var fName = $('#fName'), fDesc = $('#fDesc'), fBody = $('#fBody');
   var tabFields = $('#tabFields'), tabMd = $('#tabMd'), paneFields = $('#paneFields'), paneMd = $('#paneMd'), mdOut = $('#mdOut');
@@ -331,12 +408,13 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   function openDB(){
     return new Promise(function(resolve, reject){
       if (!window.indexedDB) { reject(new Error('no indexedDB')); return; }
-      var r = indexedDB.open('verstak', 1);
+      var r = indexedDB.open('verstak', 2);
       r.onupgradeneeded = function(){
         var db = r.result;
-        db.createObjectStore('skills', { keyPath: 'id' });
-        db.createObjectStore('messages', { keyPath: 'id' });
-        db.createObjectStore('meta', { keyPath: 'key' });
+        ['skills', 'messages', 'docs'].forEach(function(n){
+          if (!db.objectStoreNames.contains(n)) db.createObjectStore(n, { keyPath: 'id' });
+        });
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
       };
       r.onsuccess = function(){ resolve(r.result); };
       r.onerror = function(){ reject(r.error); };
@@ -369,7 +447,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   function dbDel(store, key){ return dbWrite(store, function(s){ s.delete(key); }); }
   function dbClear(store){ return dbWrite(store, function(s){ s.clear(); }); }
   function saveSettings(){
-    return dbPut('meta', { key: 'settings', apiKey: settings.apiKey, model: settings.model, activeId: settings.activeId });
+    return dbPut('meta', { key: 'settings', apiKey: settings.apiKey, model: settings.model, activeId: settings.activeId, systemPrompt: settings.systemPrompt });
   }
 
   /* ---------- Markdown (escape first, then format) ---------- */
@@ -444,7 +522,8 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     if (m.role === 'user') {
       d.className = 'msg user';
       if (m.skill) d.appendChild(el('span', 'pill name', m.skill));
-      d.appendChild(el('p', null, m.text));
+      if (m.files && m.files.length) d.appendChild(filesEl(m.files));
+      if (m.text) d.appendChild(el('p', null, m.text));
       return d;
     }
     d.className = 'msg claude';
@@ -524,11 +603,11 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   function applySkill(id){
     if (!findSkill(id)) return;
     settings.activeId = id; saveSettings(); updateApplied();
-    if (skillsSheet.open) skillsSheet.close();
+    if (libSheet.open) libSheet.close();
   }
   function unapplySkill(){
     settings.activeId = null; saveSettings(); updateApplied();
-    if (skillsSheet.open) renderSkills();
+    if (libSheet.open) renderSkills();
   }
 
   function renderSkills(){
@@ -624,30 +703,57 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     if (buf.trim()) handle(buf);
   }
 
+  function toBlocks(m){
+    var blocks = [];
+    (m.files || []).forEach(function(f){
+      if (f.kind === 'image' && f.data) blocks.push({ type: 'image', source: { type: 'base64', media_type: f.mime, data: f.data } });
+      else if (f.kind === 'pdf' && f.data) blocks.push({ type: 'document', title: f.name, source: { type: 'base64', media_type: 'application/pdf', data: f.data } });
+      else if (f.kind === 'text' && f.data) blocks.push({ type: 'text', text: 'Файл «' + f.name + '»:\n<file>\n' + f.data.replace(/<\/file>/g, '<\\/file>') + '\n</file>' });
+      else blocks.push({ type: 'text', text: '[Файл «' + f.name + '» недоступний: дані не збережено.]' });
+    });
+    if (m.text) blocks.push({ type: 'text', text: m.text });
+    return blocks;
+  }
   function apiMessages(){
     var out = [];
     msgs.forEach(function(m){
-      if ((m.role === 'user' || m.role === 'assistant') && m.text) {
-        var last = out[out.length - 1];
-        if (last && last.role === m.role) last.content += '\n\n' + m.text;
-        else out.push({ role: m.role, content: m.text });
+      if ((m.role === 'user' || m.role === 'assistant') && (m.text || (m.files && m.files.length))) {
+        var blocks = toBlocks(m), last = out[out.length - 1];
+        if (last && last.role === m.role) last.blocks = last.blocks.concat(blocks);
+        else out.push({ role: m.role, blocks: blocks });
       }
     });
     out = out.slice(-40);
     while (out.length && out[0].role !== 'user') out.shift();
-    return out;
+    return out.map(function(o){
+      if (o.blocks.length === 1 && o.blocks[0].type === 'text') return { role: o.role, content: o.blocks[0].text };
+      return { role: o.role, content: o.blocks };
+    });
+  }
+  function stableSystem(){
+    var t = BASE_SYSTEM;
+    if (settings.systemPrompt.trim()) t += '\n\nІнструкції користувача:\n' + settings.systemPrompt.trim();
+    var on = docs.filter(function(d){ return d.on; });
+    if (on.length) {
+      t += '\n\nДокументи користувача (постійний контекст, спирайся на них у відповідях):';
+      on.forEach(function(d){
+        t += '\n<document name="' + d.name.replace(/"/g, "'") + '">\n' + d.text.replace(/<\/document>/g, '<\\/document>') + '\n</document>';
+      });
+    }
+    return t;
   }
   function buildSystem(){
+    var blocks = [{ type: 'text', text: stableSystem(), cache_control: { type: 'ephemeral' } }];
     var s = activeSkill();
-    if (!s) return BASE_SYSTEM;
-    return BASE_SYSTEM + '\n\nЗастосовано Skill «' + s.name + '».\nОпис: ' + s.desc +
-      '\n\nІнструкції Skill:\n' + s.body + '\n\nСлідуй цим інструкціям, доки Skill застосовано.';
+    if (s) blocks.push({ type: 'text', text: 'Застосовано Skill «' + s.name + '».\nОпис: ' + s.desc +
+      '\n\nІнструкції Skill:\n' + s.body + '\n\nСлідуй цим інструкціям, доки Skill застосовано.' });
+    return blocks;
   }
 
   function updateSend(){
     sendBtn.innerHTML = busy ? STOP_SVG : SEND_SVG;
     sendBtn.setAttribute('aria-label', busy ? 'Зупинити' : 'Надіслати');
-    sendBtn.disabled = busy ? false : !input.value.trim();
+    sendBtn.disabled = busy ? false : (!input.value.trim() && !pending.length);
   }
   function autosize(){
     input.style.height = 'auto';
@@ -695,10 +801,13 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   async function send(){
     if (busy) { if (abortCtl) abortCtl.abort(); return; }
     var v = input.value.trim();
-    if (!v) return;
+    if (!v && !pending.length) return;
     if (!settings.apiKey) { openSettings('Додайте ключ API, щоб надсилати повідомлення.'); return; }
     var s = activeSkill();
-    addMsg({ id: nextId(), role: 'user', text: v, skill: s ? s.name : null });
+    var um = { id: nextId(), role: 'user', text: v, skill: s ? s.name : null };
+    if (pending.length) um.files = pending.slice();
+    pending = []; renderPending();
+    addMsg(um);
     input.value = ''; autosize();
     await runChat();
   }
@@ -768,7 +877,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     fDesc.value = skill ? skill.desc : '';
     fBody.value = skill ? skill.body : '';
     updateCount(); setTab('fields');
-    if (skillsSheet.open) skillsSheet.close();
+    if (libSheet.open) libSheet.close();
     if (!sheet.open) sheet.showModal();
     if (withDraft) draftFromChat();
   }
@@ -841,7 +950,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   /* ---------- Skills list wiring ---------- */
   $('#newBtn').addEventListener('click', function(){ openSkillSheet(null, false); });
   $('#newFromList').addEventListener('click', function(){ openSkillSheet(null, false); });
-  $('#openSkills').addEventListener('click', function(){ renderSkills(); skillsSheet.showModal(); });
+  $('#openSkills').addEventListener('click', function(){ openLibrary('skills'); });
   $('#unapply').addEventListener('click', unapplySkill);
   skillsList.addEventListener('click', function(e){
     var t = e.target.closest('[data-toggle]');
@@ -874,7 +983,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     $('#fKey').value = settings.apiKey;
     $('#fModel').value = settings.model;
     $('#storageNote').hidden = storageOK;
-    if (skillsSheet.open) skillsSheet.close();
+    if (libSheet.open) libSheet.close();
     if (!settingsSheet.open) settingsSheet.showModal();
   }
   $('#openSettings').addEventListener('click', function(){ openSettings(); });
@@ -900,7 +1009,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
 
   function today(){ return new Date().toISOString().slice(0, 10); }
   $('#exportBtn').addEventListener('click', async function(){
-    var data = { app: 'verstak', version: 1, exportedAt: new Date().toISOString(), model: settings.model, skills: skills, messages: msgs };
+    var data = { app: 'verstak', version: 2, exportedAt: new Date().toISOString(), model: settings.model, systemPrompt: settings.systemPrompt, docs: docs, skills: skills, messages: msgs.map(stripFiles) };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var name = 'verstak-backup-' + today() + '.json';
     try {
@@ -927,13 +1036,17 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       if (!window.confirm('Імпорт замінить поточні Skills і розмову. Продовжити?')) return;
       skills = d.skills.filter(function(s){ return s && s.id && s.name; });
       msgs = d.messages.filter(function(m){ return m && m.id && m.role; });
+      docs = Array.isArray(d.docs) ? d.docs.filter(function(x){ return x && x.id && x.name && typeof x.text === 'string'; }) : [];
+      settings.systemPrompt = typeof d.systemPrompt === 'string' ? d.systemPrompt : '';
       msgs.concat(skills).forEach(function(x){ if (typeof x.id === 'number') lastId = Math.max(lastId, x.id); });
-      await dbClear('skills'); await dbClear('messages');
+      await dbClear('skills'); await dbClear('messages'); await dbClear('docs');
       for (var i = 0; i < skills.length; i++) await dbPut('skills', skills[i]);
       for (var j = 0; j < msgs.length; j++) await dbPut('messages', msgs[j]);
+      for (var k = 0; k < docs.length; k++) await dbPut('docs', docs[k]);
+      saveSettings();
       if (settings.activeId && !findSkill(settings.activeId)) { settings.activeId = null; saveSettings(); }
-      updateApplied(); renderAll();
-      setSetNotice('Імпортовано: Skills — ' + skills.length + ', повідомлень — ' + msgs.length + '.');
+      updateApplied(); updateCtx(); renderAll();
+      setSetNotice('Імпортовано: Skills — ' + skills.length + ', документів — ' + docs.length + ', повідомлень — ' + msgs.length + '.');
     } catch (err) {
       setSetNotice('Не вдалося імпортувати: це не файл резервної копії Верстака.');
     }
@@ -944,6 +1057,308 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     msgs = []; await dbClear('messages'); renderAll();
     settingsSheet.close();
   });
+
+  /* ---------- Attachments ---------- */
+  var MAX_FILE = 10 * 1024 * 1024, MAX_FILES = 5, MAX_TEXT = 200000;
+  var TEXT_EXT = /\.(txt|md|markdown|json|csv|tsv|xml|yml|yaml|html|css|js|ts|tsx|jsx|py|sql|sh|log|ini|toml)$/i;
+  var X_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4L4 12"/></svg>';
+  var pendingEl = $('#pending'), attachFile = $('#attachFile'), attNote = $('#attNote'), attTimer = 0;
+
+  function fileKind(f){
+    var t = (f.type || '').toLowerCase();
+    if (t.indexOf('image/') === 0) return 'image';
+    if (t === 'application/pdf' || /\.pdf$/i.test(f.name)) return 'pdf';
+    if (t.indexOf('text/') === 0 || t === 'application/json' || TEXT_EXT.test(f.name)) return 'text';
+    return null;
+  }
+  function readAs(file, how){
+    return new Promise(function(resolve, reject){
+      var r = new FileReader();
+      r.onload = function(){ resolve(r.result); };
+      r.onerror = function(){ reject(r.error); };
+      r[how](file);
+    });
+  }
+  async function imageToJpeg(file){
+    var url = await readAs(file, 'readAsDataURL');
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { reject(new Error('image')); return; }
+        var k = Math.min(1, 1568 / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      };
+      img.onerror = function(){ reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+  async function processFile(file){
+    var kind = fileKind(file);
+    if (!kind) throw new Error('Тип файлу «' + file.name + '» не підтримується. Можна зображення, PDF і текстові файли.');
+    if (file.size > MAX_FILE) throw new Error('Файл «' + file.name + '» завеликий: ліміт 10 МБ.');
+    var f = { id: 'f' + nextId(), name: file.name, kind: kind, size: file.size };
+    if (kind === 'image') {
+      try { f.data = await imageToJpeg(file); f.mime = 'image/jpeg'; }
+      catch (e) {
+        if (/^image\/(jpeg|png|gif|webp)$/.test(file.type)) { f.data = String(await readAs(file, 'readAsDataURL')).split(',')[1]; f.mime = file.type; }
+        else throw new Error('Не вдалося прочитати зображення «' + file.name + '».');
+      }
+    } else if (kind === 'pdf') {
+      f.data = String(await readAs(file, 'readAsDataURL')).split(',')[1]; f.mime = 'application/pdf';
+    } else {
+      var t = await readAs(file, 'readAsText');
+      if (t.length > MAX_TEXT) throw new Error('Текстовий файл «' + file.name + '» завеликий: ліміт 200 тис. символів.');
+      f.data = t; f.mime = 'text/plain';
+    }
+    return f;
+  }
+  function stripFiles(m){
+    if (!m.files) return m;
+    var c = {}; for (var k in m) c[k] = m[k];
+    c.files = m.files.map(function(f){ return { id: f.id, name: f.name, kind: f.kind, mime: f.mime, size: f.size, data: null }; });
+    return c;
+  }
+  function filesEl(files){
+    var w = el('div', 'files');
+    files.forEach(function(f){
+      if (f.kind === 'image' && f.data) {
+        var i = document.createElement('img');
+        i.className = 'thumb'; i.alt = f.name; i.src = 'data:' + f.mime + ';base64,' + f.data;
+        w.appendChild(i);
+      } else w.appendChild(el('span', 'filetag', f.name));
+    });
+    return w;
+  }
+  function attNotice(text){
+    clearTimeout(attTimer);
+    attNote.textContent = text || ''; attNote.hidden = !text;
+    if (text) attTimer = setTimeout(function(){ attNote.hidden = true; }, 7000);
+  }
+  function renderPending(){
+    pendingEl.innerHTML = '';
+    pending.forEach(function(f, i){
+      var a = el('div', 'att');
+      a.appendChild(el('span', null, f.name));
+      var b = el('button'); b.type = 'button'; b.innerHTML = X_SVG;
+      b.setAttribute('aria-label', 'Прибрати ' + f.name); b.setAttribute('data-rm', String(i));
+      a.appendChild(b); pendingEl.appendChild(a);
+    });
+    updateSend();
+  }
+  $('#attachBtn').addEventListener('click', function(){ attachFile.click(); });
+  pendingEl.addEventListener('click', function(e){
+    var b = e.target.closest('[data-rm]');
+    if (b) { pending.splice(+b.getAttribute('data-rm'), 1); renderPending(); }
+  });
+  attachFile.addEventListener('change', async function(e){
+    var files = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = '';
+    var errs = [];
+    for (var i = 0; i < files.length; i++) {
+      if (pending.length >= MAX_FILES) { errs.push('Не більше ' + MAX_FILES + ' файлів у повідомленні.'); break; }
+      try { pending.push(await processFile(files[i])); } catch (err) { errs.push(err.message); }
+    }
+    renderPending();
+    attNotice(errs.join(' '));
+  });
+
+  /* ---------- Library: context documents ---------- */
+  var libTab = 'skills';
+  var libTabSkills = $('#libTabSkills'), libTabContext = $('#libTabContext');
+  function fmtTok(n){ return n < 1000 ? String(n) : (n / 1000).toFixed(1) + ' тис.'; }
+  function est(chars){ return Math.ceil(chars / 3); }
+  function docsOn(){ return docs.filter(function(d){ return d.on; }); }
+  function ctxChars(){
+    return docsOn().reduce(function(n, d){ return n + d.text.length; }, 0) + settings.systemPrompt.trim().length;
+  }
+  function plural(n){
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'документ';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'документи';
+    return 'документів';
+  }
+  function updateCtx(){
+    var n = docsOn().length, sp = !!settings.systemPrompt.trim(), bar = $('#ctxbar');
+    if (!n && !sp) { bar.hidden = true; return; }
+    var parts = [];
+    if (sp) parts.push('інструкції');
+    if (n) parts.push(n + ' ' + plural(n));
+    bar.textContent = 'Контекст: ' + parts.join(' + ') + ', ≈ ' + fmtTok(est(ctxChars())) + ' токенів';
+    bar.hidden = false;
+  }
+  function setLibTab(t){
+    libTab = t;
+    var sk = t === 'skills';
+    libTabSkills.setAttribute('aria-selected', String(sk));
+    libTabContext.setAttribute('aria-selected', String(!sk));
+    $('#paneSkills').hidden = !sk; $('#paneContext').hidden = sk;
+    $('#actSkills').hidden = !sk; $('#actContext').hidden = sk;
+    if (sk) renderSkills(); else { $('#sysPrompt').value = settings.systemPrompt; renderContext(); }
+  }
+  function openLibrary(t){
+    setLibTab(t || 'skills');
+    if (settingsSheet.open) settingsSheet.close();
+    if (!libSheet.open) libSheet.showModal();
+  }
+  libTabSkills.addEventListener('click', function(){ setLibTab('skills'); });
+  libTabContext.addEventListener('click', function(){ setLibTab('context'); });
+  $('#ctxbar').addEventListener('click', function(){ openLibrary('context'); });
+
+  function ctxNotice(text){
+    var n = $('#ctxNote');
+    n.textContent = text || ''; n.hidden = !text;
+  }
+  function renderContext(){
+    var tot = est(ctxChars());
+    $('#ctxTotal').textContent = 'У кожному запиті Claude бачить інструкції та всі увімкнені документи: зараз приблизно ' +
+      fmtTok(tot) + ' токенів.' + (tot > 100000 ? ' Це багато: вимкніть зайве, щоб не вичерпати контекст і не переплачувати.' : '');
+    var box = $('#docsList');
+    box.innerHTML = '';
+    if (!docs.length) {
+      box.appendChild(el('p', 'note', 'Документів ще немає. Додайте STATE.md, специфікацію чи правила: Claude бачитиме їх у кожній розмові, поки документ увімкнений.'));
+      return;
+    }
+    docs.forEach(function(d){
+      var card = el('div', 'sk' + (d.on ? ' on' : ''));
+      var row = el('div', 'row');
+      row.appendChild(el('h3', null, d.name));
+      if (d.on) row.appendChild(el('span', 'pill', 'У контексті'));
+      card.appendChild(row);
+      card.appendChild(el('p', 'meta', '≈ ' + fmtTok(est(d.text.length)) + ' токенів, ' + d.text.length + ' символів'));
+      var tools = el('div', 'tools');
+      var t = el('button', d.on ? 'btn' : 'btn skill', d.on ? 'Вимкнути' : 'Увімкнути');
+      t.type = 'button'; t.setAttribute('data-dtoggle', d.id);
+      var eb = el('button', 'icon-btn sm'); eb.type = 'button'; eb.innerHTML = EDIT_SVG;
+      eb.setAttribute('aria-label', 'Редагувати ' + d.name); eb.setAttribute('data-dedit', d.id);
+      var db = el('button', 'icon-btn sm'); db.type = 'button'; db.innerHTML = TRASH_SVG;
+      db.setAttribute('aria-label', 'Видалити ' + d.name); db.setAttribute('data-ddel', d.id);
+      tools.appendChild(t); tools.appendChild(eb); tools.appendChild(db);
+      card.appendChild(tools);
+      box.appendChild(card);
+    });
+  }
+  function findDoc(id){
+    for (var i = 0; i < docs.length; i++) if (docs[i].id === id) return docs[i];
+    return null;
+  }
+  function uniqueName(name){
+    var base = name, n = 2;
+    while (docs.some(function(d){ return d.name === name; })) { name = base.replace(/(\.[^.]+)?$/, ' (' + n + ')$1'); n++; }
+    return name;
+  }
+
+  $('#sysPrompt').addEventListener('input', function(){
+    settings.systemPrompt = this.value;
+    saveSettings(); updateCtx(); renderContext();
+  });
+  $('#docsList').addEventListener('click', function(e){
+    var t = e.target.closest('[data-dtoggle]');
+    if (t) { var d = findDoc(t.getAttribute('data-dtoggle')); if (d) { d.on = !d.on; dbPut('docs', d); renderContext(); updateCtx(); } return; }
+    var ed = e.target.closest('[data-dedit]');
+    if (ed) { var x = findDoc(ed.getAttribute('data-dedit')); if (x) openDocSheet(x); return; }
+    var dl = e.target.closest('[data-ddel]');
+    if (dl) {
+      var doc = findDoc(dl.getAttribute('data-ddel'));
+      if (!doc || !window.confirm('Видалити документ «' + doc.name + '»?')) return;
+      docs = docs.filter(function(y){ return y.id !== doc.id; });
+      dbDel('docs', doc.id); renderContext(); updateCtx();
+    }
+  });
+
+  $('#addDocFile').addEventListener('click', function(){ $('#docFile').click(); });
+  $('#docFile').addEventListener('change', async function(e){
+    var files = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = '';
+    var errs = [], added = 0;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (fileKind(f) !== 'text') { errs.push('«' + f.name + '»: у контекст додаються лише текстові файли (md, txt, json…). PDF і зображення прикріплюйте до повідомлень скріпкою.'); continue; }
+      try {
+        var text = await readAs(f, 'readAsText');
+        if (text.length > 500000) { errs.push('«' + f.name + '» завеликий: ліміт 500 тис. символів.'); continue; }
+        var doc = { id: 'd' + nextId(), name: uniqueName(f.name), text: text, on: true, ts: Date.now() };
+        docs.unshift(doc); dbPut('docs', doc); added++;
+      } catch (err) { errs.push('Не вдалося прочитати «' + f.name + '».'); }
+    }
+    renderContext(); updateCtx();
+    ctxNotice(errs.join(' ') || (added ? 'Додано документів: ' + added + '.' : ''));
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  });
+
+  /* ---------- Document sheet ---------- */
+  var docSheet = $('#docSheet'), dName = $('#dName'), dText = $('#dText'), dDraft = $('#dDraft');
+  var editingDoc = null, dDrafting = false;
+  function dNotice(text){ var n = $('#dNotice'); n.textContent = text || ''; n.hidden = !text; }
+  function dClearErrors(){
+    ['DName', 'DText'].forEach(function(k){ $('#err' + k).hidden = true; $('#cell' + k).classList.remove('bad'); });
+  }
+  function dShowError(k, text){ var e = $('#err' + k); e.textContent = text; e.hidden = false; $('#cell' + k).classList.add('bad'); }
+  function dUpdateCount(){ $('#dCount').textContent = dText.value.length + ' символів'; }
+  dText.addEventListener('input', dUpdateCount);
+  function openDocSheet(doc){
+    dClearErrors(); dNotice('');
+    editingDoc = doc ? doc.id : null;
+    $('#docTitle').textContent = doc ? 'Редагувати документ' : 'Новий документ';
+    dName.value = doc ? doc.name : '';
+    dText.value = doc ? doc.text : '';
+    dUpdateCount();
+    if (!docSheet.open) docSheet.showModal();
+  }
+  $('#newDoc').addEventListener('click', function(){ openDocSheet(null); });
+
+  $('#dSave').addEventListener('click', function(){
+    dClearErrors();
+    var name = dName.value.trim(), text = dText.value;
+    var first = null;
+    var dup = docs.some(function(d){ return d.name === name && d.id !== editingDoc; });
+    if (!name) { dShowError('DName', 'Додайте назву, наприклад STATE.md.'); first = first || dName; }
+    else if (dup) { dShowError('DName', 'Документ із такою назвою вже є. Змініть назву.'); first = first || dName; }
+    if (!text.trim()) { dShowError('DText', 'Додайте вміст документа.'); first = first || dText; }
+    else if (text.length > 500000) { dShowError('DText', 'Документ завеликий: ліміт 500 тис. символів.'); first = first || dText; }
+    if (first) { first.focus(); return; }
+    if (editingDoc) {
+      var d = findDoc(editingDoc); d.name = name; d.text = text; dbPut('docs', d);
+    } else {
+      var nd = { id: 'd' + nextId(), name: name, text: text, on: true, ts: Date.now() };
+      docs.unshift(nd); dbPut('docs', nd);
+    }
+    docSheet.close();
+    renderContext(); updateCtx();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  });
+
+  var DOC_SYSTEM = 'Ти оновлюєш документ користувача на основі розмови. Збережи структуру й заголовки документа, зміни лише те, що змінилося, і додай нове. ' +
+    'Якщо документ порожній, склади його з розмови. Поверни повний оновлений документ без пояснень і без markdown-огорожі навколо всього документа.';
+  async function draftDoc(){
+    if (dDrafting) return;
+    dNotice('');
+    var convo = msgs.filter(function(m){ return (m.role === 'user' || m.role === 'assistant') && m.text; }).slice(-30);
+    if (!convo.length) { dNotice('Спершу поспілкуйтеся з Claude: документ оновлюється з розмови.'); return; }
+    if (!settings.apiKey) { dNotice('Додайте ключ API в налаштуваннях.'); return; }
+    dDrafting = true; dDraft.disabled = true; dDraft.textContent = 'Оновлюю…';
+    try {
+      var transcript = convo.map(function(m){ return (m.role === 'user' ? 'Користувач: ' : 'Claude: ') + m.text.slice(0, 4000); }).join('\n\n');
+      var out = await callClaude({
+        system: DOC_SYSTEM, max_tokens: 4096,
+        messages: [{ role: 'user', content: 'Поточний документ «' + (dName.value.trim() || 'без назви') + '»:\n<document>\n' + dText.value + '\n</document>\n\nРозмова:\n\n' + transcript + '\n\nПоверни оновлений документ.' }]
+      });
+      out = out.trim().replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+      if (!out) throw new Error('parse');
+      dText.value = out.slice(0, 500000); dUpdateCount();
+      dNotice('Чернетку оновлено. Перегляньте її й натисніть «Зберегти».');
+    } catch (e) {
+      dNotice(friendly(e));
+    } finally {
+      dDrafting = false; dDraft.disabled = false; dDraft.textContent = 'Оновити з розмови';
+    }
+  }
+  dDraft.addEventListener('click', draftDoc);
 
   /* ---------- Dialog plumbing ---------- */
   document.addEventListener('click', function(e){
@@ -959,11 +1374,13 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       storageOK = true;
       skills = await dbAll('skills');
       msgs = await dbAll('messages');
+      docs = await dbAll('docs');
       var meta = await dbGet('meta', 'settings');
       if (meta) {
         settings.apiKey = meta.apiKey || '';
         settings.model = meta.model || settings.model;
         settings.activeId = meta.activeId || null;
+        settings.systemPrompt = meta.systemPrompt || '';
       }
     } catch (e) {
       storageOK = false;
@@ -972,7 +1389,8 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     msgs.sort(function(a, b){ return a.id - b.id; });
     msgs.concat(skills).forEach(function(x){ if (typeof x.id === 'number') lastId = Math.max(lastId, x.id); });
     if (!findSkill(settings.activeId)) settings.activeId = null;
-    updateApplied(); renderAll(); updateSend();
+    docs.sort(function(a, b){ return b.ts - a.ts; });
+    updateApplied(); updateCtx(); renderAll(); updateSend();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
   }
   init();
