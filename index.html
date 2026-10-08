@@ -353,6 +353,11 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       <label class="lab" for="fModel">Модель</label>
       <select id="fModel"></select>
     </div>
+    <div class="cell" id="cellModelCustom" hidden>
+      <label class="lab" for="fModelCustom">ID моделі</label>
+      <input id="fModelCustom" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="claude-haiku-5-5">
+      <div class="err" id="errModel" hidden></div>
+    </div>
     <div class="cell" id="cellMaster">
       <label class="lab" for="fMaster">Промпт майстра Skills <em id="masterState">типовий</em></label>
       <textarea id="fMaster" class="tall" spellcheck="false"></textarea>
@@ -382,7 +387,8 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   var MODELS = [
     ['claude-sonnet-5-5', 'Claude Sonnet 5.5'],
     ['claude-opus-5-5', 'Claude Opus 5.5'],
-    ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5']
+    ['claude-haiku-5-5', 'Claude Haiku 5.5'],
+    ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 (застарілий)']
   ];
   var BASE_SYSTEM = 'Ти — Claude у застосунку «Верстак». Відповідай мовою користувача, чітко й без зайвих вступів.';
   var DRAFT_BODY = `Ти майстер Skills. Skill це файл SKILL.md: Claude завжди бачить лише назву й опис, а повні інструкції підключає, коли завдання збігається з описом. Твоя мета: допомогти створити Skill, який спрацьовує вчасно і дає стабільний результат.
@@ -697,7 +703,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   async function streamClaude(opts){
     var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: apiHeaders(), signal: opts.signal,
-      body: JSON.stringify({ model: settings.model, max_tokens: 4096, system: opts.system, messages: opts.messages, stream: true })
+      body: JSON.stringify({ model: settings.model, max_tokens: 8192, system: opts.system, messages: opts.messages, stream: true })
     });
     if (!res.ok) throw await apiFail(res);
     var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
@@ -921,7 +927,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
         return (m.role === 'user' ? 'Користувач: ' : 'Claude: ') + m.text.slice(0, 4000);
       }).join('\n\n');
       var text = await callClaude({
-        system: effectiveMaster() + '\n\n' + DRAFT_TAIL, max_tokens: 2000,
+        system: effectiveMaster() + '\n\n' + DRAFT_TAIL, max_tokens: 4096,
         messages: [{ role: 'user', content: 'Розмова:\n\n' + transcript + '\n\nСклади Skill.' }]
       });
       var o = parseJson(text);
@@ -1000,7 +1006,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     $('#errKey').hidden = true; $('#cellKey').classList.remove('bad');
     setSetNotice(notice || '');
     $('#fKey').value = settings.apiKey;
-    $('#fModel').value = settings.model;
+    setModelUI();
     $('#fMaster').value = effectiveMaster();
     $('#errMaster').hidden = true; $('#cellMaster').classList.remove('bad');
     updateMasterState();
@@ -1014,6 +1020,15 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
   MODELS.forEach(function(m){
     var o = el('option', null, m[1]); o.value = m[0]; modelSel.appendChild(o);
   });
+  var customOpt = el('option', null, 'Інша модель (ввести ID)'); customOpt.value = '__custom'; modelSel.appendChild(customOpt);
+  function toggleCustom(){ $('#cellModelCustom').hidden = modelSel.value !== '__custom'; $('#errModel').hidden = true; $('#cellModelCustom').classList.remove('bad'); }
+  function setModelUI(){
+    var known = MODELS.some(function(m){ return m[0] === settings.model; });
+    modelSel.value = known ? settings.model : '__custom';
+    $('#fModelCustom').value = known ? '' : settings.model;
+    toggleCustom();
+  }
+  modelSel.addEventListener('change', toggleCustom);
 
   $('#saveSettings').addEventListener('click', function(){
     var key = $('#fKey').value.trim();
@@ -1030,8 +1045,18 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
       me.hidden = false; $('#cellMaster').classList.add('bad'); $('#fMaster').focus();
       return;
     }
+    var mid = modelSel.value;
+    if (mid === '__custom') {
+      mid = $('#fModelCustom').value.trim();
+      if (!/^claude-[a-z0-9.-]+$/i.test(mid)) {
+        var mr = $('#errModel');
+        mr.textContent = 'ID має починатися з claude-, наприклад claude-haiku-5-5.';
+        mr.hidden = false; $('#cellModelCustom').classList.add('bad'); $('#fModelCustom').focus();
+        return;
+      }
+    }
     settings.apiKey = key;
-    settings.model = modelSel.value;
+    settings.model = mid;
     settings.masterPrompt = (!mv.trim() || mv.trim() === DRAFT_BODY.trim()) ? '' : mv;
     saveSettings();
     settingsSheet.close();
@@ -1387,7 +1412,7 @@ dialog::backdrop{background:rgba(25,6,15,.5)}
     try {
       var transcript = convo.map(function(m){ return (m.role === 'user' ? 'Користувач: ' : 'Claude: ') + m.text.slice(0, 4000); }).join('\n\n');
       var out = await callClaude({
-        system: DOC_SYSTEM, max_tokens: 4096,
+        system: DOC_SYSTEM, max_tokens: 8192,
         messages: [{ role: 'user', content: 'Поточний документ «' + (dName.value.trim() || 'без назви') + '»:\n<document>\n' + dText.value + '\n</document>\n\nРозмова:\n\n' + transcript + '\n\nПоверни оновлений документ.' }]
       });
       out = out.trim().replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
